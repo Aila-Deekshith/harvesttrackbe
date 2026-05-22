@@ -26,7 +26,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     // ── Get customer by ID
     @Override
-    public Customer getCustomerById(int id, String ownerId) {
+    public Customer getCustomerById(int id, Integer ownerId) {
         return customerRepository
                 .findByIdAndOwnerId(id, ownerId)
                 .orElseThrow(() -> new RuntimeException(
@@ -56,7 +56,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     // ── Update customer
     @Override
-    public Customer updateCustomer(int id, Customer updatedCustomer, String ownerId) {
+    public Customer updateCustomer(int id, Customer updatedCustomer, Integer ownerId) {
 
         Customer existing = customerRepository
                 .findByIdAndOwnerId(id, ownerId)
@@ -73,7 +73,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     // ── Delete customer
     @Override
-    public void deleteCustomer(int id, String ownerId) {
+    public void deleteCustomer(int id, Integer ownerId) {
 
         Customer existing = customerRepository
                 .findByIdAndOwnerId(id, ownerId)
@@ -87,7 +87,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     // ── Search customers
     @Override
-    public List<Customer> searchCustomers(String keyword, String ownerId) {
+    public List<Customer> searchCustomers(String keyword, Integer ownerId) {
         return customerRepository
                 .findByOwnerIdAndNameContainingIgnoreCaseOrOwnerIdAndPhoneContaining(
                         ownerId, keyword,

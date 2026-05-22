@@ -41,7 +41,7 @@ public class CustomerController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<Customer>> getCustomerById(
             @PathVariable int id,
-            @RequestParam String ownerId) {
+            @RequestParam Integer ownerId) {
         try {
             Customer customer = customerService.getCustomerById(id, ownerId);
             return ResponseEntity.ok(
@@ -78,7 +78,7 @@ public class CustomerController {
     public ResponseEntity<ApiResponse<Customer>> updateCustomer(
             @PathVariable int id,
             @RequestBody Customer customer,
-            @RequestParam String ownerId) {
+            @RequestParam Integer ownerId) {
         try {
             Customer updated = customerService.updateCustomer(id, customer, ownerId);
             return ResponseEntity.ok(
@@ -96,7 +96,7 @@ public class CustomerController {
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<Void>> deleteCustomer(
             @PathVariable int id,
-            @RequestParam String ownerId) {
+            @RequestParam Integer ownerId) {
         try {
             customerService.deleteCustomer(id, ownerId);
             return ResponseEntity.ok(
@@ -114,7 +114,7 @@ public class CustomerController {
     @GetMapping("/search")
     public ResponseEntity<ApiResponse<List<Customer>>> searchCustomers(
             @RequestParam String keyword,
-            @RequestParam String ownerId) {
+            @RequestParam Integer ownerId) {
         try {
             List<Customer> results = customerService.searchCustomers(keyword, ownerId);
             return ResponseEntity.ok(
