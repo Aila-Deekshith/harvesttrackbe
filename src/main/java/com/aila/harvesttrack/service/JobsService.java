@@ -1,6 +1,7 @@
 package com.aila.harvesttrack.service;
 
 import com.aila.harvesttrack.dto.JobsRequestDto;
+import com.aila.harvesttrack.dto.JobsResponseDto;
 import com.aila.harvesttrack.model.Jobs;
 
 import java.util.List;
@@ -8,13 +9,13 @@ import java.util.List;
 public interface JobsService {
 
     // ── Get all jobs
-    List<Jobs> getAllJobs();
+    List<JobsResponseDto> getAllJobs();
 
     // ── Get job by ID
     Jobs getJobById(Integer id);
 
     // ── Get all jobs by owner
-    List<Jobs> getJobsByOwner(Integer ownerId);
+    List<JobsResponseDto> getJobsByOwner(Integer ownerId);
 
     // ── Get jobs by customer
     List<Jobs> getJobsByCustomer(Integer customerId);
@@ -42,4 +43,6 @@ public interface JobsService {
 
     // ── Hard delete job
     void hardDeleteJob(Integer id);
+
+    List<JobsResponseDto> getRecentJobsForOwner(Integer ownerId);
 }

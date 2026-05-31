@@ -41,22 +41,22 @@ public interface JobsRepository extends JpaRepository<Jobs, Integer> {
     // ── Find jobs by owner (through customer)
     @Query("""
         SELECT j FROM Jobs j
-        WHERE j.customer.owner.id = :ownerId
+        WHERE j.owner.id = :ownerId
         AND j.deletedAt IS NULL
         ORDER BY j.createdAt DESC
     """)
-    List<Jobs> findByOwnerIdAndDeletedAtIsNull(
+    List<Jobs> findByOwner_IdAndDeletedAtIsNull(
             @Param("ownerId") Integer ownerId
     );
 
     // ── Find jobs by owner and status
     @Query("""
         SELECT j FROM Jobs j
-        WHERE j.customer.owner.id = :ownerId
+        WHERE j.owner.id = :ownerId
         AND j.status = :status
         AND j.deletedAt IS NULL
     """)
-    List<Jobs> findByOwnerIdAndStatus(
+    List<Jobs> findByOwner_IdAndStatus(
             @Param("ownerId") Integer ownerId,
             @Param("status")  String  status
     );
@@ -68,4 +68,12 @@ public interface JobsRepository extends JpaRepository<Jobs, Integer> {
         AND j.deletedAt IS NULL
     """)
     long countByOwnerId(@Param("ownerId") Integer ownerId);
+
+    List<Jobs> findByOwner_IdAndCreatedAtAfterAndDeletedAtIsNull(Integer ownerId, Instant instant);
+
+    List<Jobs> findByOwner_IdAndStatusAndCreatedAtAfter(Integer ownerId, String finished, Instant instant);
+
+    List<Jobs> findByOwner_IdAndDeletedAtIsNullAndCreatedAtAfterAndCreatedAtBefore(Integer ownerId, Instant from, Instant to);
+
+    List<Jobs> findByOwner_IdAndDeletedAtIsNullAndCreatedAtAfter(Integer ownerId, Instant from);
 }

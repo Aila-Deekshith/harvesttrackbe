@@ -1,6 +1,7 @@
 package com.aila.harvesttrack.controller;
 
 import com.aila.harvesttrack.dto.ApiResponse;
+import com.aila.harvesttrack.dto.CustomerResponseDTO;
 import com.aila.harvesttrack.model.Customer;
 import com.aila.harvesttrack.service.CustomerService;
 import lombok.RequiredArgsConstructor;
@@ -22,10 +23,10 @@ public class CustomerController {
     // ── GET all customers
     // GET /api/customers?ownerId=owner123
     @GetMapping
-    public ResponseEntity<ApiResponse<List<Customer>>> getAllCustomers(
+    public ResponseEntity<ApiResponse<List<CustomerResponseDTO>>> getAllCustomers(
             @RequestParam Integer ownerId) {
         try {
-            List<Customer> customers = customerService.getAllCustomers(ownerId);
+            List<CustomerResponseDTO> customers = customerService.getAllCustomers(ownerId);
             return ResponseEntity.ok(
                     ApiResponse.success("Customers fetched successfully", customers)
             );

@@ -1,5 +1,6 @@
 package com.aila.harvesttrack.service;
 
+import com.aila.harvesttrack.dto.CustomerResponseDTO;
 import com.aila.harvesttrack.model.Customer;
 
 import java.util.List;
@@ -7,7 +8,7 @@ import java.util.List;
 public interface CustomerService {
 
     // ── Get all customers of an owner
-    List<Customer> getAllCustomers(Integer ownerId);
+    List<CustomerResponseDTO> getAllCustomers(Integer ownerId);
 
     // ── Get single customer by ID
     Customer getCustomerById(int id, Integer ownerId);

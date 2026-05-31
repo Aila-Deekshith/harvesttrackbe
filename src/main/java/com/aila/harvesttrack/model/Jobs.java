@@ -51,4 +51,11 @@ public class Jobs {
 
     private Float acres;
     private Float cost;
+
+    @JsonBackReference("owner-jobs")
+    @ManyToOne
+    @JoinColumn(name = "ownerId")
+    private Owner owner;
+
+    private String paymentStatus;
 }

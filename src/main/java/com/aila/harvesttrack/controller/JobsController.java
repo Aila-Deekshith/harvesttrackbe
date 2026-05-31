@@ -6,6 +6,7 @@ import com.aila.harvesttrack.dto.JobsResponseDto;
 import com.aila.harvesttrack.model.Jobs;
 import com.aila.harvesttrack.service.JobsService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +19,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/jobs")
 @CrossOrigin(origins = "*")
@@ -31,82 +33,10 @@ public class JobsController {
     @GetMapping
     public ResponseEntity<ApiResponse<List<JobsResponseDto>>> getAllJobs() {
         try {
-            List<Jobs> jobs = jobsService.getAllJobs();
-
-            // formatters
-            DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a"); // e.g. 08:30 AM
-            DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd"); // e.g. 2024-01-15
-            ZoneId zone = ZoneId.systemDefault();
-
-            List<JobsResponseDto> dtos = jobs.stream().map(j -> {
-                JobsResponseDto dto = new JobsResponseDto();
-
-                dto.setId(j.getId());
-
-                // customerName and village (assume village stored in customer.address)
-                if (j.getCustomer() != null) {
-                    dto.setCustomerName(j.getCustomer().getName());
-                    dto.setVillage(j.getCustomer().getAddress()); // adjust if you have a dedicated village field
-                } else {
-                    dto.setCustomerName(null);
-                    dto.setVillage(null);
-                }
-
-                // crop from activity
-                if (j.getActivity() != null) {
-                    dto.setCrop(j.getActivity().getCropType());
-                } else {
-                    dto.setCrop(null);
-                }
-
-                // acres and amount (cost)
-                Float acres = j.getAcres();
-                Float cost = j.getCost();
-
-                dto.setAcres(acres != null ? String.valueOf(acres) : null);
-
-                if(cost != null){
-                    dto.setRate(cost.toString());
-                } else {
-                    dto.setRate(null);
-                }
-
-                // startTime, endTime, date and duration (seconds)
-                if (j.getStartDate() != null) {
-                    ZonedDateTime zStart = ZonedDateTime.ofInstant(j.getStartDate(), zone);
-                    dto.setStartTime(timeFormatter.format(zStart));
-                    dto.setDate(dateFormatter.format(zStart));
-                } else {
-                    dto.setStartTime(null);
-                }
-
-                if (j.getEndDate() != null) {
-                    ZonedDateTime zEnd = ZonedDateTime.ofInstant(j.getEndDate(), zone);
-                    dto.setEndTime(timeFormatter.format(zEnd));
-
-                    // duration in seconds (end - start)
-                    if (j.getStartDate() != null) {
-                        long seconds = Duration.between(j.getStartDate(), j.getEndDate()).getSeconds();
-                        dto.setDuration(String.valueOf(seconds));
-                        if(cost != null) {
-                            dto.setAmount(String.valueOf(cost * ((float) seconds / (60 * 60))));
-                        }
-                    } else {
-                        dto.setDuration(null);
-                        dto.setAmount(null);
-                    }
-                } else {
-                    dto.setEndTime(null);
-                    dto.setDuration(null);
-                }
-
-                dto.setStatus(j.getStatus());
-                dto.setNotes(j.getDescription());
-
-                return dto;
-            }).collect(Collectors.toList());
-
-            return ResponseEntity.ok(ApiResponse.success("Jobs fetched successfully", dtos));
+            List<JobsResponseDto> jobs = jobsService.getAllJobs();
+            return ResponseEntity.ok(
+                    ApiResponse.success("Jobs fetched successfully", jobs)
+            );
         } catch (Exception e) {
             return ResponseEntity
                     .status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -134,10 +64,10 @@ public class JobsController {
     // ── GET jobs by owner
     // GET /api/jobs/owner/1
     @GetMapping("/owner/{ownerId}")
-    public ResponseEntity<ApiResponse<List<Jobs>>> getJobsByOwner(
+    public ResponseEntity<ApiResponse<List<JobsResponseDto>>> getJobsByOwner(
             @PathVariable Integer ownerId) {
         try {
-            List<Jobs> jobs = jobsService.getJobsByOwner(ownerId);
+            List<JobsResponseDto> jobs = jobsService.getJobsByOwner(ownerId);
             return ResponseEntity.ok(
                     ApiResponse.success("Jobs fetched successfully", jobs)
             );
@@ -302,6 +232,21 @@ public class JobsController {
             jobsService.hardDeleteJob(id);
             return ResponseEntity.ok(
                     ApiResponse.success("Job permanently deleted", null)
+            );
+        } catch (RuntimeException e) {
+            return ResponseEntity
+                    .status(HttpStatus.NOT_FOUND)
+                    .body(ApiResponse.error(e.getMessage()));
+        }
+    }
+
+    @GetMapping("/recent/jobs/{ownerId}")
+    public ResponseEntity<ApiResponse<List<JobsResponseDto>>> getRecentJobsForOwner(
+            @PathVariable Integer ownerId) {
+        try {
+            List<JobsResponseDto> jobs = jobsService.getRecentJobsForOwner(ownerId);
+            return ResponseEntity.ok(
+                    ApiResponse.success("Recent jobs fetched successfully", jobs)
             );
         } catch (RuntimeException e) {
             return ResponseEntity

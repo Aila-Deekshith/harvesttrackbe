@@ -20,4 +20,5 @@ public class JobsRequestDto {
     private Integer activityId;
     private Float acres;
     private Float cost;
+    private Integer ownerId;
 }

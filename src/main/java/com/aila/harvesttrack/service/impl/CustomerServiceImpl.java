@@ -1,6 +1,8 @@
 package com.aila.harvesttrack.service.impl;
 
+import com.aila.harvesttrack.dto.CustomerResponseDTO;
 import com.aila.harvesttrack.model.Customer;
+import com.aila.harvesttrack.model.Jobs;
 import com.aila.harvesttrack.model.Owner;
 import com.aila.harvesttrack.repository.CustomerRepository;
 import com.aila.harvesttrack.repository.OwnerRepository;
@@ -16,12 +18,32 @@ import java.util.List;
 public class CustomerServiceImpl implements CustomerService {
 
     private final CustomerRepository customerRepository;
-    private final    OwnerRepository ownerRepository;
+    private final OwnerRepository ownerRepository;
+    private final DashboardServiceImpl dashboardService;
 
     // ── Get all customers of an owner
     @Override
-    public List<Customer> getAllCustomers(Integer ownerId) {
-        return customerRepository.findByOwnerIdAndDeletedAtIsNullOrderByUpdatedAtDesc(ownerId);
+    public List<CustomerResponseDTO> getAllCustomers(Integer ownerId) {
+        List<Customer> customers = customerRepository.findByOwnerIdAndDeletedAtIsNullOrderByUpdatedAtDesc(ownerId);
+        return customers.stream().map(customer -> {
+            CustomerResponseDTO dto = new CustomerResponseDTO();
+            dto.setId(customer.getId());
+            dto.setName(customer.getName());
+            dto.setPhone(customer.getPhone());
+            dto.setAddress(customer.getAddress());
+            dto.setCreatedAt(customer.getCreatedAt());
+            dto.setUpdatedAt(customer.getUpdatedAt());
+            dto.setJobsCount(customer.getJobs().size());
+            dto.setAcres(customer.getJobs().stream()
+                    .map(job -> job.getAcres() != null ? job.getAcres() : 0)
+                    .reduce( 0f, Float::sum));
+
+            dto.setAmount(customer.getJobs().stream()
+                    .filter(job -> job.getStatus().equalsIgnoreCase("finished"))
+                    .map(dashboardService::calculateJobAmount)
+                    .reduce(0f, Float::sum));
+            return dto;
+        }).toList();
     }
 
     // ── Get customer by ID

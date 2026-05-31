@@ -1,20 +1,22 @@
 package com.aila.harvesttrack.service.impl;
 
+import com.aila.harvesttrack.dto.ApiResponse;
 import com.aila.harvesttrack.dto.JobsRequestDto;
-import com.aila.harvesttrack.model.Activity;
-import com.aila.harvesttrack.model.Customer;
-import com.aila.harvesttrack.model.Jobs;
-import com.aila.harvesttrack.model.Vehicle;
-import com.aila.harvesttrack.repository.ActivityRepository;
-import com.aila.harvesttrack.repository.CustomerRepository;
-import com.aila.harvesttrack.repository.JobsRepository;
-import com.aila.harvesttrack.repository.VehicleRepository;
+import com.aila.harvesttrack.dto.JobsResponseDto;
+import com.aila.harvesttrack.model.*;
+import com.aila.harvesttrack.repository.*;
 import com.aila.harvesttrack.service.JobsService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -24,11 +26,12 @@ public class JobsServiceImpl implements JobsService {
     private final CustomerRepository customerRepository;
     private final VehicleRepository vehicleRepository;
     private final ActivityRepository activityRepository;
+    private final OwnerRepository ownerRepository;
 
     // ── Get all jobs
     @Override
-    public List<Jobs> getAllJobs() {
-        return jobsRepository.findByDeletedAtIsNull();
+    public List<JobsResponseDto> getAllJobs() {
+        return returnAllJobsResponseDto(jobsRepository.findByDeletedAtIsNull());
     }
 
     // ── Get job by ID
@@ -43,8 +46,8 @@ public class JobsServiceImpl implements JobsService {
 
     // ── Get jobs by owner
     @Override
-    public List<Jobs> getJobsByOwner(Integer ownerId) {
-        return jobsRepository.findByOwnerIdAndDeletedAtIsNull(ownerId);
+    public List<JobsResponseDto> getJobsByOwner(Integer ownerId) {
+        return returnAllJobsResponseDto(jobsRepository.findByOwner_IdAndDeletedAtIsNull(ownerId));
     }
 
     // ── Get jobs by customer
@@ -84,7 +87,7 @@ public class JobsServiceImpl implements JobsService {
     // ── Get jobs by owner and status
     @Override
     public List<Jobs> getJobsByOwnerAndStatus(Integer ownerId, String status) {
-        return jobsRepository.findByOwnerIdAndStatus(ownerId, status);
+        return jobsRepository.findByOwner_IdAndStatus(ownerId, status);
     }
 
     // ── Add job
@@ -111,6 +114,12 @@ public class JobsServiceImpl implements JobsService {
                         "Activity not found with id: " + dto.getActivityId()
                 ));
 
+        //Fetch owner
+        Owner owner = ownerRepository.findById(dto.getOwnerId())
+                .orElseThrow(() -> new RuntimeException(
+                        "Owner not found with id: " + dto.getOwnerId()
+                ));
+
         Jobs job = new Jobs();
         job.setCustomer(customer);
         job.setVehicle(vehicle);
@@ -124,6 +133,7 @@ public class JobsServiceImpl implements JobsService {
         job.setActivity(activity);
         job.setAcres(dto.getAcres());
         job.setCost(dto.getCost());
+        job.setOwner(owner);
         return jobsRepository.save(job);
     }
 
@@ -217,5 +227,88 @@ public class JobsServiceImpl implements JobsService {
                 ));
 
         jobsRepository.delete(existing);
+    }
+
+    @Override
+    public List<JobsResponseDto> getRecentJobsForOwner(Integer ownerId) {
+        return returnAllJobsResponseDto(jobsRepository.findByOwner_IdAndCreatedAtAfterAndDeletedAtIsNull(
+                ownerId, Instant.now().minusSeconds( 24 * 3600)
+        ));
+    }
+
+    public List<JobsResponseDto> returnAllJobsResponseDto(List<Jobs> jobs) {
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("hh:mm a"); // e.g. 08:30 AM
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd"); // e.g. 2024-01-15
+        ZoneId zone = ZoneId.systemDefault();
+
+        List<JobsResponseDto> dtos = jobs.stream().map(j -> {
+            JobsResponseDto dto = new JobsResponseDto();
+
+            dto.setId(j.getId());
+
+            // customerName and village (assume village stored in customer.address)
+            if (j.getCustomer() != null) {
+                dto.setCustomerName(j.getCustomer().getName());
+                dto.setVillage(j.getCustomer().getAddress()); // adjust if you have a dedicated village field
+            } else {
+                dto.setCustomerName(null);
+                dto.setVillage(null);
+            }
+
+            // crop from activity
+            if (j.getActivity() != null) {
+                dto.setCrop(j.getActivity().getCropType());
+            } else {
+                dto.setCrop(null);
+            }
+
+            // acres and amount (cost)
+            Float acres = j.getAcres();
+            Float cost = j.getCost();
+
+            dto.setAcres(acres != null ? String.valueOf(acres) : null);
+
+            if(cost != null){
+                dto.setRate(cost.toString());
+            } else {
+                dto.setRate(null);
+            }
+
+            // startTime, endTime, date and duration (seconds)
+            if (j.getStartDate() != null) {
+                ZonedDateTime zStart = ZonedDateTime.ofInstant(j.getStartDate(), zone);
+                dto.setStartTime(timeFormatter.format(zStart));
+                dto.setDate(dateFormatter.format(zStart));
+            } else {
+                dto.setStartTime(null);
+            }
+
+            if (j.getEndDate() != null) {
+                ZonedDateTime zEnd = ZonedDateTime.ofInstant(j.getEndDate(), zone);
+                dto.setEndTime(timeFormatter.format(zEnd));
+
+                // duration in seconds (end - start)
+                if (j.getStartDate() != null) {
+                    long seconds = Duration.between(j.getStartDate(), j.getEndDate()).getSeconds();
+                    dto.setDuration(String.valueOf(seconds));
+                    if(cost != null) {
+                        dto.setAmount(String.valueOf(cost * ((float) seconds / (60 * 60))));
+                    }
+                } else {
+                    dto.setDuration(null);
+                    dto.setAmount(null);
+                }
+            } else {
+                dto.setEndTime(null);
+                dto.setDuration(null);
+            }
+
+            dto.setStatus(j.getStatus());
+            dto.setNotes(j.getDescription());
+
+            return dto;
+        }).collect(Collectors.toList());
+
+        return dtos;
     }
 }
